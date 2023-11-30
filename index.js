@@ -143,13 +143,61 @@ app.post('/register', async (req,res) => {
     );
   });
 
+
   // view one post
   app.get('/post/:id', async (req, res) => {
-    
+
     //grab id from request params
     const {id} = req.params;
     const postDoc = await Post.findById(id).populate('author', ['username']);
     res.json(postDoc);
+  });
+
+
+  //update post
+  app.put('/post',uploadMiddleware.single('file'), async (req,res) => {
+
+    let newPath = null;
+
+    //if theres an image get the extension and rename the file
+    if (req.file) {
+      const {originalname,path} = req.file;
+      const parts = originalname.split('.');
+      const ext = parts[parts.length - 1];
+      newPath = path+'.'+ext;
+      fs.renameSync(path, newPath);
+    }
+
+    // to include the credentials
+    const {token} = req.cookies;
+
+    jwt.verify(token, secret, {}, async (err,info) => {
+
+      if (err) throw err;
+
+      const {id,title,summary,content} = req.body;
+
+      // const postDoc = await Post.findById(id); 
+
+      // check the author of the post and the logged in users credentials
+      const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
+      if (!isAuthor) {
+        return res.status(400).json('you are not the author');
+      }
+      const updatedPost = await Post.findByIdAndUpdate(
+        id,
+        {
+          title,
+          summary,
+          content,
+          cover: newPath ? newPath : postDoc.cover,
+        },
+        { new: true } // Return the updated document
+      );
+
+      res.json(postDoc);
+    });
+
   });
 
 app.listen(4000);

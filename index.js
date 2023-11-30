@@ -138,9 +138,18 @@ app.post('/register', async (req,res) => {
     res.json(
       await Post.find()
         .populate('author', ['username'])
-        .sort({createdAt: -1})
+        .sort({createdAt: -1}) //descending
         .limit(20)
     );
+  });
+
+  // view one post
+  app.get('/post/:id', async (req, res) => {
+    
+    //grab id from request params
+    const {id} = req.params;
+    const postDoc = await Post.findById(id).populate('author', ['username']);
+    res.json(postDoc);
   });
 
 app.listen(4000);
